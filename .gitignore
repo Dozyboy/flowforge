@@ -1,0 +1,32 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+backend/data/
+backend/evals/reports/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+frontend/playwright-report/
+frontend/test-results/
+*.tsbuildinfo
+next-env.d.ts
+
+# Tooling and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
