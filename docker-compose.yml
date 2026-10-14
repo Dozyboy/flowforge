@@ -1,0 +1,95 @@
+name: flowforge
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://flowforge:flowforge@postgres:5432/flowforge
+  REDIS_URL: redis://redis:6379/0
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  PUBLIC_APP_URL: http://localhost:3000
+  PUBLIC_API_URL: http://localhost:8000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: flowforge
+      POSTGRES_PASSWORD: flowforge
+      POSTGRES_DB: flowforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowforge"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  api:
+    build: ./backend
+    image: flowforge-backend
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment: *backend-env
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: flowforge-backend
+    command: arq app.workers.main.WorkerSettings
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment: *backend-env
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        API_INTERNAL_URL: http://api:8000
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/login"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
