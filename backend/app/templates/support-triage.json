@@ -1,0 +1,28 @@
+{
+  "name": "Support ticket triage",
+  "description": "Classify incoming support messages with AI. Refunds need a manager's approval, bugs are summarized for engineering, questions get a drafted reply.",
+  "category": "Customer support",
+  "graph": {
+    "nodes": [
+      {"id": "incoming", "type": "trigger_webhook", "position": {"x": 300, "y": 0}, "data": {"label": "New support message", "config": {}}},
+      {"id": "classify", "type": "ai_classify", "position": {"x": 300, "y": 130}, "data": {"label": "Classify message", "config": {"text": "{{ trigger.body.message }}", "labels": ["refund", "bug", "question"], "instructions": "Use 'question' when unsure."}, "settings": {"retries": 2, "retry_delay_seconds": 2}}},
+      {"id": "approve_refund", "type": "approval", "position": {"x": 0, "y": 280}, "data": {"label": "Manager approves refund", "config": {"approvers": ["manager@example.com"], "message": "Refund request from {{ trigger.body.email }}:\n\n{{ trigger.body.message }}", "expires_in_hours": 48}}},
+      {"id": "refund_approved", "type": "send_email", "position": {"x": -120, "y": 430}, "data": {"label": "Confirm refund", "config": {"to": "{{ trigger.body.email }}", "subject": "Your refund is approved", "body": "Good news: your refund has been approved and will arrive within 5 business days."}}},
+      {"id": "refund_rejected", "type": "log", "position": {"x": 120, "y": 430}, "data": {"label": "Log rejection", "config": {"message": "Refund rejected for {{ trigger.body.email }}: {{ steps.approve_refund.output.comment }}", "level": "warning"}}},
+      {"id": "summarize_bug", "type": "ai_summarize", "position": {"x": 300, "y": 280}, "data": {"label": "Summarize bug", "config": {"text": "{{ trigger.body.message }}", "max_words": 40}}},
+      {"id": "notify_engineering", "type": "send_email", "position": {"x": 300, "y": 430}, "data": {"label": "Email engineering", "config": {"to": "engineering@example.com", "subject": "Bug report from {{ trigger.body.email }}", "body": "{{ steps.summarize_bug.output.summary }}\n\nOriginal message:\n{{ trigger.body.message }}"}}},
+      {"id": "draft_reply", "type": "ai_generate", "position": {"x": 600, "y": 280}, "data": {"label": "Draft a reply", "config": {"system": "You are a friendly support agent for a SaaS company.", "prompt": "Write a short, helpful reply to this customer question:\n\n{{ trigger.body.message }}"}}},
+      {"id": "send_reply", "type": "send_email", "position": {"x": 600, "y": 430}, "data": {"label": "Send reply", "config": {"to": "{{ trigger.body.email }}", "subject": "Re: your question", "body": "{{ steps.draft_reply.output.text }}"}}}
+    ],
+    "edges": [
+      {"id": "e1", "source": "incoming", "target": "classify"},
+      {"id": "e2", "source": "classify", "sourceHandle": "refund", "target": "approve_refund"},
+      {"id": "e3", "source": "approve_refund", "sourceHandle": "approved", "target": "refund_approved"},
+      {"id": "e4", "source": "approve_refund", "sourceHandle": "rejected", "target": "refund_rejected"},
+      {"id": "e5", "source": "classify", "sourceHandle": "bug", "target": "summarize_bug"},
+      {"id": "e6", "source": "summarize_bug", "target": "notify_engineering"},
+      {"id": "e7", "source": "classify", "sourceHandle": "question", "target": "draft_reply"},
+      {"id": "e8", "source": "draft_reply", "target": "send_reply"}
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "Lead qualification",
+  "description": "Extract company, budget and timeline from a contact form, then route big deals to sales and everyone else to a nurture email.",
+  "category": "Sales",
+  "graph": {
+    "nodes": [
+      {"id": "form", "type": "trigger_webhook", "position": {"x": 250, "y": 0}, "data": {"label": "Contact form submitted", "config": {}}},
+      {"id": "extract", "type": "ai_extract", "position": {"x": 250, "y": 130}, "data": {"label": "Extract lead details", "config": {"text": "{{ trigger.body.message }}", "fields": {"company": "Company name", "budget": "Budget in USD as a number", "timeline": "When they want to start"}}}},
+      {"id": "big_deal", "type": "condition", "position": {"x": 250, "y": 260}, "data": {"label": "Budget over $5,000?", "config": {"left": "{{ steps.extract.output.budget or 0 }}", "operator": "greater_than", "right": "5000"}}},
+      {"id": "alert_sales", "type": "send_email", "position": {"x": 60, "y": 400}, "data": {"label": "Alert sales", "config": {"to": "sales@example.com", "subject": "Hot lead: {{ steps.extract.output.company }}", "body": "Budget: {{ steps.extract.output.budget }}\nTimeline: {{ steps.extract.output.timeline }}\nContact: {{ trigger.body.email }}"}}},
+      {"id": "nurture", "type": "send_email", "position": {"x": 440, "y": 400}, "data": {"label": "Send nurture email", "config": {"to": "{{ trigger.body.email }}", "subject": "Thanks for reaching out", "body": "Thanks for your interest! Here are a few resources to get started while we review your request."}}},
+      {"id": "record", "type": "transform", "position": {"x": 250, "y": 540}, "data": {"label": "Lead record", "config": {"output": {"email": "{{ trigger.body.email }}", "company": "{{ steps.extract.output.company }}", "qualified": "{{ steps.big_deal.output.result }}"}}}}
+    ],
+    "edges": [
+      {"id": "e1", "source": "form", "target": "extract"},
+      {"id": "e2", "source": "extract", "target": "big_deal"},
+      {"id": "e3", "source": "big_deal", "sourceHandle": "true", "target": "alert_sales"},
+      {"id": "e4", "source": "big_deal", "sourceHandle": "false", "target": "nurture"},
+      {"id": "e5", "source": "alert_sales", "target": "record"},
+      {"id": "e6", "source": "nurture", "target": "record"}
+    ]
+  }
+}
