@@ -1,0 +1,4 @@
+Task: generate
+
+Prompt:
+$prompt

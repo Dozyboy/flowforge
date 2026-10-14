@@ -1,0 +1,82 @@
+[project]
+name = "flowforge-backend"
+version = "1.0.0"
+description = "FlowForge API, execution engine and background worker"
+readme = "../README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "email-validator>=2.2",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "redis>=5.2",
+    "arq>=0.26",
+    "pyjwt[crypto]>=2.10",
+    "bcrypt>=4.2",
+    "openai>=1.55",
+    "httpx>=0.28",
+    "python-multipart>=0.0.18",
+    "structlog>=24.4",
+    "prometheus-client>=0.21",
+    "aiosmtplib>=3.0",
+    "jinja2>=3.1",
+    "jsonschema>=4.23",
+    "croniter>=5.0",
+    "cryptography>=43",
+    "tzdata>=2024.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "respx>=0.21",
+    "types-jsonschema>=4.23",
+    "types-croniter>=5.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "ASYNC", "S", "RUF"]
+ignore = [
+    "B008", # FastAPI dependencies use function calls in defaults
+]
+
+[tool.ruff.lint.isort]
+# The local `alembic/` migrations folder must not make the alembic package look first-party.
+known-third-party = ["alembic"]
+known-first-party = ["app", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/versions"]
+
+[[tool.mypy.overrides]]
+module = ["arq.*", "prometheus_client.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+addopts = "-ra"
