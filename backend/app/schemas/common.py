@@ -1,0 +1,20 @@
+from pydantic import BaseModel, ConfigDict
+
+
+class ApiModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+
+class Page[T](ApiModel):
+    items: list[T]
+    total: int
+    limit: int
+    offset: int
+
+
+class UrlResponse(ApiModel):
+    url: str
+
+
+class AcceptedResponse(ApiModel):
+    status: str = "accepted"
